@@ -1,508 +1,464 @@
-# 🚀 Guia passo a passo — React (Vite) + Router + Página Labs (GitHub)
+# TaskBoard — Kanban + Pomodoro (React)
 
-## 0) Preparar o projeto
+Um quadro de tarefas estilo Kanban com timer Pomodoro integrado.  
+Colunas: **Backlog → Doing → Done**.  
+Recursos: CRUD de tarefas, filtros, busca, persistência em `localStorage`.
 
-1. **Verifique Node e npm**
+## ✨ Features
+- Criar/editar/excluir tarefas (título, descrição, label, prioridade, prazo)
+- Mover entre colunas (Backlog/Doing/Done)
+- Timer **Pomodoro 25/5** por tarefa (iniciar/pausar/zerar)
+- Busca e filtro por label/prioridade
+- **Persistência** automática em `localStorage`
+- **React Router v6** (rotas: `/`, `/new`, `/task/:id`)
 
+## 🧰 Stack
+- React 18 + Vite
+- React Router v6
+- Context API
+- CSS Modules
+- `nanoid` (IDs)
+
+---
+
+## 🚀 Começando
+
+### 1) Pré-requisitos
 ```bash
 node -v
 npm -v
-```
+````
 
-**Rodapé:** checa se o ambiente está pronto.
-
-2. **Crie o projeto com Vite**
+### 2) Criar o projeto (Vite)
 
 ```bash
-npm create vite@latest web_tech_page -- --template react
-cd web_tech_page
-code . # Entra no VS Code
-npm install # Dentro do VS Code execute isso
+npm create vite taskboard -- --template react
+cd taskboard
+npm install
+```
+
+### 3) Instalar dependências
+
+```bash
+npm install react-router-dom nanoid
+```
+
+### 4) Rodar
+
+```bash
 npm run dev
 ```
 
-**Rodapé:** Vite cria o esqueleto React moderno, com `src/`, `main.jsx`, `App.jsx`. O `--template react` aplica o template oficial.
+Acesse: [http://localhost:5173/](http://localhost:5173/)
 
 ---
 
-## 1) Estrutura base de pastas
+## 📁 Estrutura sugerida
 
-> Ação: dentro de `src/`, crie as pastas:
-
-* `src/components/`
-* `src/components/layout/`
-* `src/components/pages/`
-* `src/assets/` (para imagens, ícones, etc.)
-
-**Rodapé:** separar por **responsabilidade** (layout, pages, componentes auxiliares) ajuda a escalar. `layout` = elementos recorrentes de “layout” (Navbar, Footer), `pages` = telas roteáveis.
+```
+src/
+├─ App.jsx
+├─ main.jsx
+├─ context/
+│  └─ TasksContext.jsx
+├─ components/
+│  ├─ layout/
+│  │  ├─ Navbar.jsx
+│  │  └─ Navbar.module.css
+│  ├─ board/
+│  │  ├─ Board.jsx
+│  │  └─ Column.jsx
+│  ├─ task/
+│  │  ├─ TaskCard.jsx
+│  │  ├─ TaskForm.jsx
+│  │  └─ TaskCard.module.css
+│  └─ timer/
+│     └─ PomodoroTimer.jsx
+└─ styles/
+   └─ globals.css (opcional)
+```
 
 ---
 
-## 2) Primeiro componente: “HelloWorld”
+## 🧩 Código essencial
 
-> Ação: crie `src/components/HelloWorld.jsx`:
+> Crie/edite os arquivos a seguir conforme os blocos de código.
 
-```jsx
-// src/components/HelloWorld.jsx
-export default function HelloWorld() {
-  return (
-    <div>
-      <h1>Hello, World!</h1>
-    </div>
-  );
-}
-```
-
-**Rodapé:** componente **funcional** (padrão atual). Nome em **PascalCase** (`HelloWorld`) é a convenção para componentes React.
-
-> Ação: (opcional) use no `App.jsx` só para validar o ambiente.
+### `src/main.jsx`
 
 ```jsx
-import HelloWorld from "./components/HelloWorld";
+import React from 'react'
+import ReactDOM from 'react-dom/client'
+import App from './App.jsx'
 
-// src/App.jsx
-export default function App() {
-  return <HelloWorld />
-}
+ReactDOM.createRoot(document.getElementById('root')).render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>
+)
 ```
 
-**Rodapé:** valida que o bundler e Hot Reload estão funcionando.
-
----
-
-## 3) Navbar (layout) + CSS Module
-
-> Ação: crie `src/components/layout/Navbar.module.css` (mínimo para ver estilo isolado):
-
-```css
-/* src/components/layout/Navbar.module.css */
-.navbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 16px;
-  border-bottom: 1px solid #eee;
-}
-.navbar ul { display: flex; gap: 12px; list-style: none; padding: 0; margin: 0; }
-.navbar a { text-decoration: none; }
-```
-
-**Rodapé:** CSS Modules dão **escopo local** e evitam conflitos de classe.
-
-> Ação: crie `src/components/layout/Navbar.jsx`:
+### `src/App.jsx`
 
 ```jsx
-// src/components/layout/Navbar.jsx
-import { Link } from 'react-router-dom';
-import styles from './Navbar.module.css';
-
-export default function Navbar() {
-  return (
-    <header className={styles.navbar}>
-      <h1><Link to="/">WebTech PUC Minas</Link></h1>
-      <nav>
-        <ul>
-          <li><Link to="/">Home</Link></li>
-          <li><Link to="/labs">Labs</Link></li>
-        </ul>
-      </nav>
-    </header>
-  );
-}
-```
-
-**Rodapé:** usa `Link` (Router) para navegação **SPA** sem recarregar a página. Importa `styles` do CSS Module, garantindo nomes únicos de classe.
-
----
-
-## 4) Footer (layout)
-
-> Ação: crie `src/components/layout/Footer.module.css`:
-
-```css
-/* src/components/layout/Footer.module.css */
-.footer {
-  padding: 16px;
-  border-top: 1px solid #eee;
-  text-align: center;
-  font-size: 0.9rem;
-}
-```
-
-> Ação: crie `src/components/layout/Footer.jsx`:
-
-```jsx
-// src/components/layout/Footer.jsx
-import styles from './Footer.module.css';
-
-export default function Footer() {
-  return (
-    <footer className={styles.footer}>
-      © {new Date().getFullYear()} WebTech — Todos os direitos reservados.
-    </footer>
-  );
-}
-```
-
-**Rodapé:** componente simples e **reutilizável**. Mantém consistência visual entre páginas.
-
----
-
-## 5) Instalar e configurar React Router v6
-
-> Abra outro terminal.
-> Ação: instale:
-
-```bash
-npm install react-router-dom
-```
-
-> Ação: edite `src/App.jsx` para incluir rotas e o layout:
-
-```jsx
-// src/App.jsx
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import Navbar from './components/layout/Navbar';
-import Footer from './components/layout/Footer';
-import Home from './components/pages/Home';
-import Labs from './components/pages/Labs';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
+import { TaskProvider } from './context/TasksContext'
+import Navbar from './components/layout/Navbar'
+import Board from './components/board/Board'
+import TaskForm from './components/task/TaskForm'
 
 export default function App() {
   return (
     <Router>
-      <Navbar />
-      <div style={{ padding: 16 }}>
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/labs" element={<Labs />} />
-        </Routes>
-      </div>
-      <Footer />
+      <TaskProvider>
+        <Navbar />
+        <div style={{ maxWidth: 960, margin: '0 auto', padding: '16px' }}>
+          <Routes>
+            <Route path="/" element={<Board />} />
+            <Route path="/new" element={<TaskForm />} />
+            <Route path="/task/:id" element={<TaskForm />} />
+          </Routes>
+        </div>
+      </TaskProvider>
     </Router>
-  );
+  )
 }
 ```
 
-**Rodapé:** `Routes`/`Route` (v6) substituem `Switch`. `element={<Componente />}` é a nova API. O `Router` engloba toda a app para habilitar navegação SPA.
-
----
-
-## 6) Página Home
-
-> Ação: crie `src/components/pages/Home.module.css`:
-
-```css
-/* src/components/pages/Home.module.css */
-.home_page {
-  padding: 24px 0;
-}
-.home_page span {
-  color: #3b82f6; /* azul */
-  font-weight: 600;
-}
-```
-
-> Ação: crie `src/components/pages/Home.jsx`:
+### `src/context/TasksContext.jsx`
 
 ```jsx
-// src/components/pages/Home.jsx
-import styles from './Home.module.css';
+import { createContext, useContext, useEffect, useMemo, useState } from 'react'
+import { nanoid } from 'nanoid'
 
-export default function Home() {
-  return (
-    <div className={styles.home_page}>
-      <h1>Bem-vindo à <span>WebTech!</span></h1>
-      <p>Este é o laboratório prático em React.</p>
-    </div>
-  );
-}
-```
+const TasksContext = createContext(null)
 
-**Rodapé:** página simples para rota `/`. CSS Module mantém estilos locais; `Home` segue **PascalCase**.
+const DEFAULT_TASKS = [
+  { id: nanoid(), title: 'Estudar React', description: 'Hooks e Router',
+    label: 'study', priority: 'high', dueDate: '', status: 'backlog', pomodoros: 0, createdAt: Date.now() },
+  { id: nanoid(), title: 'Protótipo UI', description: 'Wireframe do board',
+    label: 'design', priority: 'medium', dueDate: '', status: 'doing', pomodoros: 1, createdAt: Date.now() }
+]
 
----
-
-## 7) Componente com estado: Contador
-
-> Ação: crie `src/components/Contador.jsx`:
-
-```jsx
-// src/components/Contador.jsx
-import { useState } from 'react';
-
-export default function Contador() {
-  const [contador, setContador] = useState(0);
-
-  return (
-    <div>
-      <p>Contagem: {contador}</p>
-      <button onClick={() => setContador(c => c + 1)}>Incrementar</button>
-    </div>
-  );
-}
-```
-
-**Rodapé:** `useState` adiciona **estado local**. A atualização via “função set” (`c => c + 1`) é segura e evita depender de valores antigos.
-
-> Ação: (opcional) use o `Contador` na Home:
-
-```jsx
-// src/components/pages/Home.jsx
-import styles from './Home.module.css';
-import Contador from '../Contador';
-
-export default function Home() {
-  return (
-    <div className={styles.home_page}>
-      <h1>Bem-vindo à <span>WebTech!</span></h1>
-      <Contador />
-    </div>
-  );
-}
-```
-
-**Rodapé:** demonstra **composição** de componentes (Home usa Contador).
-
----
-
-## 8) Página Labs com consumo de API (GitHub)
-
-### 8.1) Card e subcomponentes (layout)
-
-> Ação: crie `src/components/layout/LabCard.module.css`:
-
-```css
-/* src/components/layout/LabCard.module.css */
-.lab_card {
-  border: 1px solid #eee;
-  border-radius: 12px;
-  padding: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.card_top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-.contributors { display: flex; gap: 8px; }
-.card_footer {
-  display: flex; align-items: center; justify-content: space-between;
-}
-.labels { display: flex; gap: 6px; }
-```
-
-> Ação: crie `src/components/layout/LabLabel.module.css`:
-
-```css
-/* src/components/layout/LabLabel.module.css */
-.lab_label {
-  font-size: 0.75rem;
-  padding: 2px 6px;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-}
-```
-
-> Ação: crie `src/components/layout/LabContributor.module.css`:
-
-```css
-/* src/components/layout/LabContributor.module.css */
-.lab_contributor img {
-  width: 28px; height: 28px; border-radius: 50%;
-  display: block;
-}
-```
-
-> Ação: crie `src/components/layout/LabLabel.jsx`:
-
-```jsx
-// src/components/layout/LabLabel.jsx
-import styles from './LabLabel.module.css';
-
-export default function LabLabel({ children }) {
-  return <div className={styles.lab_label}>{children}</div>;
-}
-```
-
-**Rodapé:** `LabLabel` é um **chip**/etiqueta simples e reutilizável.
-
-> Ação: crie `src/components/layout/LabContributor.jsx`:
-
-```jsx
-// src/components/layout/LabContributor.jsx
-import styles from './LabContributor.module.css';
-
-export default function LabContributor({ contributor }) {
-  return (
-    <div className={styles.lab_contributor}>
-      <a href={contributor.html_url} target="_blank" rel="noopener noreferrer">
-        <img src={contributor.avatar_url} alt={contributor.login} />
-      </a>
-    </div>
-  );
-}
-```
-
-**Rodapé:** exibe avatar e link do contribuidor. `rel="noopener noreferrer"` é prática de **segurança** para links externos.
-
-> Ação: crie `src/components/layout/LabCard.jsx`:
-
-```jsx
-// src/components/layout/LabCard.jsx
-import LabLabel from './LabLabel';
-import LabContributor from './LabContributor';
-import styles from './LabCard.module.css';
-
-export default function LabCard({ repo }) {
-  return (
-    <div className={styles.lab_card}>
-      <div>
-        <div className={styles.card_top}>
-          <h5>{repo.name}</h5>
-          <div className={styles.contributors}>
-            {repo.contributors?.slice(0, 3).map(c => (
-              <LabContributor key={c.id} contributor={c} />
-            ))}
-          </div>
-        </div>
-        <p>{repo.description}</p>
-      </div>
-      <div className={styles.card_footer}>
-        <div className={styles.labels}>
-          {repo.language && <LabLabel>{repo.language}</LabLabel>}
-          {repo.stargazers_count > 0 && <LabLabel>⭐ {repo.stargazers_count}</LabLabel>}
-        </div>
-        <a href={repo.html_url} target="_blank" rel="noreferrer">Saiba mais</a>
-      </div>
-    </div>
-  );
-}
-```
-
-**Rodapé:** `LabCard` recebe `repo` (objeto da API) e compõe subcomponentes. `?.slice` evita erro quando `contributors` ainda não chegou.
-
----
-
-### 8.2) Página Labs (fetch + ordenação + filtro)
-
-> Ação: crie `src/components/pages/Lab.module.css`:
-
-```css
-/* src/components/pages/Lab.module.css */
-.lab_page { padding: 24px 0; }
-.description { color: #555; margin: 8px 0 16px; }
-.grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 12px;
-}
-```
-
-> Ação: crie `src/components/pages/Labs.jsx`:
-
-```jsx
-// src/components/pages/Labs.jsx
-import { useEffect, useState } from 'react';
-import LabCard from '../layout/LabCard';
-import styles from './Lab.module.css';
-
-export default function Labs() {
-  const [repos, setRepos] = useState([]);
-  const githubUsername = 'seu-github';
+export function TaskProvider({ children }) {
+  const [tasks, setTasks] = useState(() => {
+    const saved = localStorage.getItem('tasks@taskboard')
+    return saved ? JSON.parse(saved) : DEFAULT_TASKS
+  })
 
   useEffect(() => {
-    async function fetchData() {
-      const res = await fetch(`https://api.github.com/users/${githubUsername}/repos`);
-      const data = await res.json();
+    localStorage.setItem('tasks@taskboard', JSON.stringify(tasks))
+  }, [tasks])
 
-      // Busca contribuidores de cada repositório
-      const reposWithContributors = await Promise.all(
-        data.map(async (repo) => {
-          const contributorsRes = await fetch(repo.contributors_url);
-          const contributorsData = await contributorsRes.json();
-          return { ...repo, contributors: contributorsData };
-        })
-      );
+  function addTask(payload) {
+    setTasks(prev => [{ id: nanoid(), createdAt: Date.now(), pomodoros: 0, status: 'backlog', ...payload }, ...prev])
+  }
 
-      // Filtra e ordena labs
-      const filtered = reposWithContributors
-        .filter((repo) => repo.name.startsWith('lab-'))
-        .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
+  function updateTask(id, patch) {
+    setTasks(prev => prev.map(t => (t.id === id ? { ...t, ...patch } : t)))
+  }
 
-      setRepos(filtered);
-    }
+  function removeTask(id) {
+    setTasks(prev => prev.filter(t => t.id !== id))
+  }
 
-    fetchData();
-  }, [githubUsername]);
+  function moveTask(id, direction) {
+    const order = ['backlog', 'doing', 'done']
+    setTasks(prev => prev.map(t => {
+      if (t.id !== id) return t
+      const idx = order.indexOf(t.status)
+      const next = direction === 'left' ? Math.max(idx - 1, 0) : Math.min(idx + 1, order.length - 1)
+      return { ...t, status: order[next] }
+    }))
+  }
 
-  return (
-    <div className={styles.lab_page}>
-      <section>
-        <h1>Labs</h1>
-        <p className={styles.description}>
-          Labs públicos da organização no GitHub (filtrados por prefixo <code>lab-</code>).
-        </p>
-        <div className={styles.grid}>
-          {repos.map((repo) => (
-            <LabCard key={repo.id} repo={repo} />
-          ))}
-        </div>
-      </section>
-    </div>
-  );
+  function incrementPomodoros(id) {
+    setTasks(prev => prev.map(t => (t.id === id ? { ...t, pomodoros: (t.pomodoros || 0) + 1 } : t)))
+  }
+
+  const value = useMemo(() => ({
+    tasks, addTask, updateTask, removeTask, moveTask, incrementPomodoros
+  }), [tasks])
+
+  return <TasksContext.Provider value={value}>{children}</TasksContext.Provider>
+}
+
+export function useTasks() {
+  const ctx = useContext(TasksContext)
+  if (!ctx) throw new Error('useTasks must be used within <TaskProvider>')
+  return ctx
 }
 ```
 
-**Rodapé:** `useEffect` faz o **fetch** na montagem. Em seguida, busca **contributors** de cada repo, filtra só nomes que começam com `lab-` e ordena por `updated_at`. A página renderiza uma **grid** de `LabCard`.
+### `src/components/layout/Navbar.module.css`
+
+```css
+.navbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 16px; border-bottom: 1px solid #eee;
+}
+.actions { display: flex; gap: 8px; }
+a.btn {
+  border: 1px solid #ccc; padding: 6px 10px; border-radius: 8px; text-decoration: none;
+}
+```
+
+### `src/components/layout/Navbar.jsx`
+
+```jsx
+import { Link, useLocation } from 'react-router-dom'
+import styles from './Navbar.module.css'
+
+export default function Navbar() {
+  const { pathname } = useLocation()
+  return (
+    <header className={styles.navbar}>
+      <Link to="/">TaskBoard</Link>
+      <div className={styles.actions}>
+        {pathname !== '/new' && <Link className="btn" to="/new">+ Nova tarefa</Link>}
+        <a className="btn" href="https://github.com" target="_blank" rel="noreferrer">GitHub</a>
+      </div>
+    </header>
+  )
+}
+```
+
+### `src/components/board/Board.jsx`
+
+```jsx
+import Column from './Column'
+import { useMemo, useState } from 'react'
+import { useTasks } from '../../context/TasksContext'
+
+export default function Board() {
+  const { tasks } = useTasks()
+  const [query, setQuery] = useState('')
+  const [label, setLabel] = useState('all')
+
+  const filtered = useMemo(() => {
+    return tasks.filter(t => {
+      const matchesQuery = t.title.toLowerCase().includes(query.toLowerCase())
+      const matchesLabel = label === 'all' ? true : t.label === label
+      return matchesQuery && matchesLabel
+    })
+  }, [tasks, query, label])
+
+  return (
+    <>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+        <input placeholder="Buscar..." value={query} onChange={e => setQuery(e.target.value)} />
+        <select value={label} onChange={e => setLabel(e.target.value)}>
+          <option value="all">Todas labels</option>
+          <option value="study">study</option>
+          <option value="design">design</option>
+          <option value="dev">dev</option>
+        </select>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 }}>
+        <Column title="Backlog" status="backlog" tasks={filtered} />
+        <Column title="Doing"   status="doing"   tasks={filtered} />
+        <Column title="Done"    status="done"    tasks={filtered} />
+      </div>
+    </>
+  )
+}
+```
+
+### `src/components/board/Column.jsx`
+
+```jsx
+import TaskCard from '../task/TaskCard'
+
+export default function Column({ title, status, tasks }) {
+  const list = tasks.filter(t => t.status === status)
+  return (
+    <section>
+      <h3>{title} ({list.length})</h3>
+      <div style={{ display: 'grid', gap: 8 }}>
+        {list.map(t => <TaskCard key={t.id} task={t} />)}
+      </div>
+    </section>
+  )
+}
+```
+
+### `src/components/task/TaskCard.module.css`
+
+```css
+.card {
+  border: 1px solid #e5e7eb; border-radius: 10px; padding: 10px; background: #fff;
+  display: grid; gap: 6px;
+}
+.meta { display: flex; gap: 8px; font-size: 12px; color: #6b7280; }
+.actions { display: flex; gap: 6px; }
+.btn { border: 1px solid #d1d5db; background: #f9fafb; padding: 4px 8px; border-radius: 8px; }
+.badge { border: 1px solid #d1d5db; padding: 2px 6px; border-radius: 999px; font-size: 12px; }
+```
+
+### `src/components/task/TaskCard.jsx`
+
+```jsx
+import { Link } from 'react-router-dom'
+import { useTasks } from '../../context/TasksContext'
+import PomodoroTimer from '../timer/PomodoroTimer'
+import styles from './TaskCard.module.css'
+
+export default function TaskCard({ task }) {
+  const { removeTask, moveTask } = useTasks()
+
+  return (
+    <article className={styles.card}>
+      <strong>{task.title}</strong>
+      {task.description && <p>{task.description}</p>}
+
+      <div className={styles.meta}>
+        {task.label && <span className={styles.badge}>{task.label}</span>}
+        {task.priority && <span className={styles.badge}>prio: {task.priority}</span>}
+        {task.pomodoros > 0 && <span className={styles.badge}>🍅 {task.pomodoros}</span>}
+      </div>
+
+      <PomodoroTimer taskId={task.id} />
+
+      <div className={styles.actions}>
+        <button className={styles.btn} onClick={() => moveTask(task.id, 'left')}>←</button>
+        <button className={styles.btn} onClick={() => moveTask(task.id, 'right')}>→</button>
+        <Link className={styles.btn} to={`/task/${task.id}`}>Editar</Link>
+        <button className={styles.btn} onClick={() => removeTask(task.id)}>Excluir</button>
+      </div>
+    </article>
+  )
+}
+```
+
+### `src/components/timer/PomodoroTimer.jsx`
+
+```jsx
+import { useEffect, useRef, useState } from 'react'
+import { useTasks } from '../../context/TasksContext'
+
+const WORK_MIN = 25
+const BREAK_MIN = 5
+
+export default function PomodoroTimer({ taskId }) {
+  const { incrementPomodoros } = useTasks()
+  const [isRunning, setIsRunning] = useState(false)
+  const [isBreak, setIsBreak] = useState(false)
+  const [seconds, setSeconds] = useState(WORK_MIN * 60)
+  const intervalRef = useRef(null)
+
+  useEffect(() => {
+    if (!isRunning) return
+    intervalRef.current = setInterval(() => {
+      setSeconds(prev => {
+        if (prev <= 1) {
+          clearInterval(intervalRef.current)
+          if (!isBreak) incrementPomodoros(taskId)
+          const nextIsBreak = !isBreak
+          setIsBreak(nextIsBreak)
+          setSeconds((nextIsBreak ? BREAK_MIN : WORK_MIN) * 60)
+          setIsRunning(false)
+          return 0
+        }
+        return prev - 1
+      })
+    }, 1000)
+    return () => clearInterval(intervalRef.current)
+  }, [isRunning, isBreak, incrementPomodoros, taskId])
+
+  const mm = String(Math.floor(seconds / 60)).padStart(2, '0')
+  const ss = String(seconds % 60).padStart(2, '0')
+
+  return (
+    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+      <span>{isBreak ? 'Break' : 'Work'} {mm}:{ss}</span>
+      <button onClick={() => setIsRunning(!isRunning)}>{isRunning ? 'Pausar' : 'Iniciar'}</button>
+      <button onClick={() => { setIsRunning(false); setIsBreak(false); setSeconds(WORK_MIN * 60) }}>Reset</button>
+    </div>
+  )
+}
+```
+
+### `src/components/task/TaskForm.jsx`
+
+```jsx
+import { useNavigate, useParams } from 'react-router-dom'
+import { useTasks } from '../../context/TasksContext'
+import { useEffect, useState } from 'react'
+
+const EMPTY = { title: '', description: '', label: '', priority: 'medium', dueDate: '' }
+
+export default function TaskForm() {
+  const { tasks, addTask, updateTask } = useTasks()
+  const navigate = useNavigate()
+  const { id } = useParams()
+  const [form, setForm] = useState(EMPTY)
+
+  useEffect(() => {
+    if (!id) return
+    const found = tasks.find(t => t.id === id)
+    if (found) setForm({ title: found.title, description: found.description || '', label: found.label || '', priority: found.priority || 'medium', dueDate: found.dueDate || '' })
+  }, [id, tasks])
+
+  function onSubmit(e) {
+    e.preventDefault()
+    if (!form.title.trim()) return
+    if (id) updateTask(id, form)
+    else addTask(form)
+    navigate('/')
+  }
+
+  return (
+    <form onSubmit={onSubmit} style={{ display: 'grid', gap: 10 }}>
+      <h2>{id ? 'Editar tarefa' : 'Nova tarefa'}</h2>
+      <input placeholder="Título" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} />
+      <textarea placeholder="Descrição (opcional)" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} />
+      <input placeholder="Label (ex: study, dev, design)" value={form.label} onChange={e => setForm({ ...form, label: e.target.value })} />
+      <select value={form.priority} onChange={e => setForm({ ...form, priority: e.target.value })}>
+        <option value="low">low</option>
+        <option value="medium">medium</option>
+        <option value="high">high</option>
+      </select>
+      <input type="date" value={form.dueDate} onChange={e => setForm({ ...form, dueDate: e.target.value })} />
+      <div style={{ display: 'flex', gap: 8 }}>
+        <button type="submit">{id ? 'Salvar' : 'Criar'}</button>
+        <button type="button" onClick={() => navigate(-1)}>Cancelar</button>
+      </div>
+    </form>
+  )
+}
+```
 
 ---
 
-## 9) Rodar o projeto
+## 🧪 Checklist funcional
 
-> Ação:
-
-```bash
-npm run dev
-```
-
-Acesse: `http://localhost:5173/`
-
-**Rodapé:** porta padrão do Vite. O Hot Reload atualiza a UI a cada edição.
+* [ ] Criar tarefa
+* [ ] Editar tarefa
+* [ ] Excluir tarefa
+* [ ] Mover tarefa entre colunas
+* [ ] Iniciar/pausar/zerar Pomodoro
+* [ ] Persistir no `localStorage`
+* [ ] Buscar por texto / filtrar por label
 
 ---
 
-## 10) Estrutura final esperada
+## 🧭 Extensões (opcionais)
 
-```
-src/
-├── App.jsx
-├── assets/
-├── components/
-│   ├── Contador.jsx
-│   ├── HelloWorld.jsx
-│   ├── layout/
-│   │   ├── Footer.jsx
-│   │   ├── Footer.module.css
-│   │   ├── LabCard.jsx
-│   │   ├── LabCard.module.css
-│   │   ├── LabContributor.jsx
-│   │   ├── LabContributor.module.css
-│   │   ├── LabLabel.jsx
-│   │   ├── LabLabel.module.css
-│   │   ├── Navbar.jsx
-│   │   └── Navbar.module.css
-│   └── pages/
-│       ├── Home.jsx
-│       ├── Home.module.css
-│       ├── Lab.module.css
-│       └── Labs.jsx
-└── main.jsx
-```
-
-**Rodapé:** organização por **feature/uso**: `layout` para elementos estruturais, `pages` para rotas, componentes pontuais na raiz de `components/`.
+* Drag & drop com **@dnd-kit** ou **react-beautiful-dnd**
+* Tema **dark mode**
+* Testes com **Vitest + React Testing Library**
+* TypeScript
 
 ---
 
-se quiser, eu compactei tudo isso em um **README.md pronto** (com esses mesmos blocos e rodapés). quer que eu gere o arquivo para você colar direto no repositório?
+## 📄 Licença
+
+MIT
+
+```
+
+---
+
+se quiser, eu também gero um **repositório inicial (zip)** com essa estrutura e os arquivos já preenchidos pra você só abrir e rodar. Quer?
+```
